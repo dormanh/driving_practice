@@ -17,7 +17,10 @@ app = Dash(
 img_path = lambda spec: f"assets/{spec}.png"
 off_path = img_path("off")
 n = 3
-interval = 1000  # this milliseconds between two on / off switches
+interval = 1000
+freq = 0.5
+time_since_last_flash = 0
+max_dead_time = 4000
 
 app.layout = html.Div(
     [
@@ -45,11 +48,16 @@ app.layout = html.Div(
     Input("interval", "n_intervals"),
 )
 def update_metrics(n_intervals: int) -> list:
+    global time_since_last_flash
     if n_intervals:
-        if n_intervals % 2 == 0:
+        if ((n_intervals % 2 == 0) & np.random.binomial(1, freq)) | (
+            max_dead_time < time_since_last_flash
+        ):
+            time_since_last_flash = 0
             light_on = np.random.choice(np.arange(3))
             color = np.random.choice(["red", "yellow", "green"])
             return [img_path(color) if (i == light_on) else off_path for i in range(n)]
+    time_since_last_flash += interval
     return [off_path for _ in range(n)]
 
 
