@@ -37,22 +37,23 @@ app.layout = html.Div(
         ),
         html.Div(
             [
-                html.Img(
-                    id=f"light_{i}",
-                    src=img_path("off"),
-                    width=300,
-                    style=dict(marginRight=100),
-                )
-                for i in range(n)
+                *[
+                    html.Img(
+                        id=f"light_{i}",
+                        src=img_path("off"),
+                        width=300,
+                        style=dict(marginRight=50),
+                    )
+                    for i in range(n)
+                ],
+                html.Audio(
+                    id="feedback",
+                    src=audio_path("incorrect"),
+                    controls=True,
+                    autoPlay=False,
+                ),
             ],
-            style=dict(marginLeft=100, marginTop=50, display="inline-block"),
-        ),
-        html.Audio(
-            id="feedback",
-            src=audio_path("incorrect"),
-            controls=True,
-            autoPlay=False,
-            style=dict(marginLeft=500, marginTop=50),
+            style=dict(marginLeft=50, marginTop=50, display="inline-block"),
         ),
     ]
 )
