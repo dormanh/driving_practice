@@ -15,12 +15,19 @@ app = Dash(
 )
 
 img_path = lambda spec: f"assets/{spec}.png"
-off_path = img_path("off")
+audio_path = lambda spec: f"assets/{spec}.mp3"
 n = 3
-interval = 1000
+interval = 2000
 freq = 0.5
 time_since_last_flash = 0
-max_dead_time = 4000
+min_dead_time = 2000
+max_dead_time = 5000
+
+
+def should_break(light_srcs: list) -> bool:
+    """Determines if the player should break based on the lights that are currently on."""
+    return any((("red" in s) or ("yellow" in s) for s in light_srcs))
+
 
 app.layout = html.Div(
     [
@@ -32,12 +39,20 @@ app.layout = html.Div(
             [
                 html.Img(
                     id=f"light_{i}",
+                    src=img_path("off"),
                     width=300,
                     style=dict(marginRight=100),
                 )
                 for i in range(n)
             ],
-            style=dict(marginLeft=100, marginTop=100, display="inline-block"),
+            style=dict(marginLeft=100, marginTop=50, display="inline-block"),
+        ),
+        html.Audio(
+            id="feedback",
+            src=audio_path("incorrect"),
+            controls=True,
+            autoPlay=False,
+            style=dict(marginLeft=500, marginTop=50),
         ),
     ]
 )
@@ -45,20 +60,29 @@ app.layout = html.Div(
 
 @app.callback(
     *[Output(f"light_{i}", "src") for i in range(n)],
+    Output("feedback", "src"),
     Input("interval", "n_intervals"),
 )
-def update_metrics(n_intervals: int) -> list:
+def update_lights(n_intervals: int) -> list:
     global time_since_last_flash
-    if n_intervals:
-        if ((n_intervals % 2 == 0) & np.random.binomial(1, freq)) | (
-            max_dead_time < time_since_last_flash
-        ):
-            time_since_last_flash = 0
-            light_on = np.random.choice(np.arange(3))
-            color = np.random.choice(["red", "yellow", "green"])
-            return [img_path(color) if (i == light_on) else off_path for i in range(n)]
     time_since_last_flash += interval
-    return [off_path for _ in range(n)]
+    if (
+        (n_intervals is not None)
+        & (min_dead_time < time_since_last_flash)
+        & (np.random.binomial(1, freq) | (max_dead_time < time_since_last_flash))
+    ):
+        time_since_last_flash = 0
+        light_on = np.random.choice(np.arange(3))
+        color = np.random.choice(["red", "yellow", "green"])
+        new_imgs = [
+            img_path(color) if (i == light_on) else img_path("off") for i in range(n)
+        ]
+    else:
+        new_imgs = [img_path("off") for _ in range(n)]
+    return (
+        *new_imgs,
+        audio_path("correct" if should_break(new_imgs) else "incorrect"),
+    )
 
 
 if __name__ == "__main__":
