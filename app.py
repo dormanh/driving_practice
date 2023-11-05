@@ -1,5 +1,6 @@
 import numpy as np
-from dash import Dash, Input, Output, dcc, html
+from dash import Dash, Input, Output, State, ctx, dcc, html
+from typing import Optional
 
 app = Dash(
     __name__,
@@ -14,44 +15,45 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 
-img_path = lambda spec: f"assets/{spec}.png"
-audio_path = lambda spec: f"assets/{spec}.mp3"
+light_path = lambda spec: f"assets/{spec}.png"
+brake_path = lambda on: f"assets/brake_{'on'if on else 'off'}.png"
 n = 3
-interval = 2000
+light_interval = 2000
+brake_interval = 100
 freq = 0.5
 time_since_last_flash = 0
 min_dead_time = 2000
 max_dead_time = 5000
+time_since_last_brake = 0
 
 
-def should_break(light_srcs: list) -> bool:
-    """Determines if the player should break based on the lights that are currently on."""
+def should_brake(light_srcs: list) -> bool:
+    """Determines if the player should brake based on the lights that are currently on."""
     return any((("red" in s) or ("yellow" in s) for s in light_srcs))
 
 
 app.layout = html.Div(
     [
         dcc.Interval(
-            id="interval",
-            interval=interval,
+            id="light_interval",
+            interval=light_interval,
+        ),
+        dcc.Interval(
+            id="brake_interval",
+            interval=brake_interval,
         ),
         html.Div(
             [
                 *[
                     html.Img(
                         id=f"light_{i}",
-                        src=img_path("off"),
+                        src=light_path("off"),
                         width=300,
                         style=dict(marginRight=50),
                     )
                     for i in range(n)
                 ],
-                html.Audio(
-                    id="feedback",
-                    src=audio_path("incorrect"),
-                    controls=True,
-                    autoPlay=False,
-                ),
+                html.Img(id="brake", src=brake_path(False), width=300),
             ],
             style=dict(marginLeft=50, marginTop=50, display="inline-block"),
         ),
@@ -61,12 +63,11 @@ app.layout = html.Div(
 
 @app.callback(
     *[Output(f"light_{i}", "src") for i in range(n)],
-    Output("feedback", "src"),
-    Input("interval", "n_intervals"),
+    Input("light_interval", "n_intervals"),
 )
 def update_lights(n_intervals: int) -> list:
     global time_since_last_flash
-    time_since_last_flash += interval
+    time_since_last_flash += light_interval
     if (
         (n_intervals is not None)
         & (min_dead_time < time_since_last_flash)
@@ -76,14 +77,31 @@ def update_lights(n_intervals: int) -> list:
         light_on = np.random.choice(np.arange(3))
         color = np.random.choice(["red", "yellow", "green"])
         new_imgs = [
-            img_path(color) if (i == light_on) else img_path("off") for i in range(n)
+            light_path(color) if (i == light_on) else light_path("off")
+            for i in range(n)
         ]
     else:
-        new_imgs = [img_path("off") for _ in range(n)]
-    return (
-        *new_imgs,
-        audio_path("correct" if should_break(new_imgs) else "incorrect"),
-    )
+        new_imgs = [light_path("off") for _ in range(n)]
+    return new_imgs
+
+
+@app.callback(
+    Output("brake", "src"),
+    Input("brake", "n_clicks"),
+    Input("brake_interval", "n_intervals"),
+    State("brake", "src"),
+)
+def brake(n_clicks: Optional[int], n_intervals: int, brake_src: str) -> str:
+    global time_since_last_brake
+    time_since_last_brake += brake_interval
+    if ctx.triggered_id == "brake":
+        time_since_last_brake = 0
+        return brake_path(True)
+    else:
+        if brake_interval * 10 < time_since_last_brake:
+            return brake_path(False)
+        else:
+            return brake_src
 
 
 if __name__ == "__main__":
