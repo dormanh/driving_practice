@@ -1,4 +1,6 @@
 import numpy as np
+import dash_bootstrap_components as dbc
+
 from dash import Dash, Input, Output, State, ctx, dcc, html
 from typing import Optional
 
@@ -33,36 +35,60 @@ def should_brake(light_srcs: list) -> bool:
 
 
 app.layout = html.Div(
-    [
-        dcc.Interval(
-            id="light_interval",
-            interval=light_interval,
-        ),
-        dcc.Interval(
-            id="brake_interval",
-            interval=brake_interval,
-        ),
-        html.Div(
-            [
-                *[
+    dbc.Row(
+        [
+            dbc.Col(
+                html.Div(
+                    [
+                        dcc.Interval(
+                            id="light_interval",
+                            interval=light_interval,
+                        ),
+                        dcc.Interval(
+                            id="brake_interval",
+                            interval=brake_interval,
+                        ),
+                    ]
+                )
+            ),
+            *[
+                dbc.Col(
                     html.Img(
                         id=f"light_{i}",
                         src=light_path("off"),
                         width=300,
                         style=dict(marginRight=50),
                     )
-                    for i in range(n)
-                ],
-                html.Img(id="brake", src=brake_path(False), width=300),
+                )
+                for i in range(n)
             ],
-            style=dict(marginLeft=50, marginTop=50, display="inline-block"),
-        ),
-    ]
+            dbc.Col(
+                [
+                    dbc.Row(
+                        html.Img(
+                            id="brake",
+                            src=brake_path(False),
+                            width=300,
+                        )
+                    ),
+                    dbc.Row(
+                        html.Img(
+                            id="single_light",
+                            src=light_path("single_off"),
+                            width=200,
+                        )
+                    ),
+                ]
+            ),
+        ]
+    ),
+    style=dict(marginTop=50),
 )
 
 
 @app.callback(
     *[Output(f"light_{i}", "src") for i in range(n)],
+    Output("single_light", "src"),
     Input("light_interval", "n_intervals"),
 )
 def update_lights(n_intervals: int) -> list:
@@ -76,12 +102,16 @@ def update_lights(n_intervals: int) -> list:
         time_since_last_flash = 0
         light_on = np.random.choice(np.arange(3))
         color = np.random.choice(["red", "yellow", "green"])
+        single_on = np.random.binomial(1, 0.5)
         new_imgs = [
-            light_path(color) if (i == light_on) else light_path("off")
-            for i in range(n)
+            *[
+                light_path(color) if (i == light_on) else light_path("off")
+                for i in range(n)
+            ],
+            light_path("single_on" if single_on else "single_off"),
         ]
     else:
-        new_imgs = [light_path("off") for _ in range(n)]
+        new_imgs = [*[light_path("off") for _ in range(n)], light_path("single_off")]
     return new_imgs
 
 
