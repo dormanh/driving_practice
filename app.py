@@ -102,7 +102,7 @@ def update_lights(n_intervals: int) -> list:
         time_since_last_flash = 0
         light_on = np.random.choice(np.arange(3))
         color = np.random.choice(["red", "yellow", "green"])
-        single_on = np.random.binomial(1, 0.5)
+        single_on = np.random.binomial(1, 0.4)
         new_imgs = [
             *[
                 light_path(color) if (i == light_on) else light_path("off")
