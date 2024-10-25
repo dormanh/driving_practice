@@ -18,9 +18,11 @@ app = Dash(
 
 light_path = lambda spec: f"assets/{spec}.png"
 n = 3
-light_interval = 2000
+multiple_interval = 2000
+single_interval = 2000
 freq = 0.5
-time_since_last_flash = 0
+time_since_last_flash_multiple = 0
+time_since_last_flash_single = 0
 min_dead_time = 2000
 max_dead_time = 5000
 
@@ -32,8 +34,12 @@ app.layout = html.Div(
                 html.Div(
                     [
                         dcc.Interval(
-                            id="light_interval",
-                            interval=light_interval,
+                            id="multiple_interval",
+                            interval=multiple_interval,
+                        ),
+                        dcc.Interval(
+                            id="single_interval",
+                            interval=single_interval,
                         ),
                     ]
                 )
@@ -51,16 +57,6 @@ app.layout = html.Div(
             ],
             dbc.Col(
                 [
-                    html.Div(
-                        dbc.Button(
-                            "fékezz!",
-                            id="break",
-                            color="danger",
-                            size="lg",
-                            outline=True,
-                        ),
-                        style=dict(marginBottom=100, marginRight=100),
-                    ),
                     dbc.Row(
                         html.Img(
                             id="single_light",
@@ -79,31 +75,49 @@ app.layout = html.Div(
 
 @app.callback(
     *[Output(f"light_{i}", "src") for i in range(n)],
-    Output("single_light", "src"),
-    Input("light_interval", "n_intervals"),
+    Input("multiple_interval", "n_intervals"),
 )
 def update_lights(n_intervals: int) -> list:
-    global time_since_last_flash
-    time_since_last_flash += light_interval
+    global time_since_last_flash_multiple
+    time_since_last_flash_multiple += multiple_interval
     if (
         (n_intervals is not None)
-        & (min_dead_time < time_since_last_flash)
-        & (np.random.binomial(1, freq) | (max_dead_time < time_since_last_flash))
+        & (min_dead_time < time_since_last_flash_multiple)
+        & (
+            np.random.binomial(1, freq)
+            | (max_dead_time < time_since_last_flash_multiple)
+        )
     ):
-        time_since_last_flash = 0
+        time_since_last_flash_multiple = 0
         light_on = np.random.choice(np.arange(3))
         color = np.random.choice(["red", "yellow", "green"])
-        single_on = np.random.binomial(1, 0.4)
-        new_imgs = [
-            *[
-                light_path(color) if (i == light_on) else light_path("off")
-                for i in range(n)
-            ],
-            light_path("single_on" if single_on else "single_off"),
+        return [
+            light_path(color) if (i == light_on) else light_path("off")
+            for i in range(n)
         ]
     else:
-        new_imgs = [*[light_path("off") for _ in range(n)], light_path("single_off")]
-    return new_imgs
+        return [light_path("off") for _ in range(n)]
+
+
+@app.callback(
+    Output("single_light", "src"),
+    Input("single_interval", "n_intervals"),
+)
+def update_light(n_intervals: int) -> list:
+    global time_since_last_flash_single
+    time_since_last_flash_single += single_interval
+    if (
+        (n_intervals is not None)
+        & (min_dead_time < time_since_last_flash_single)
+        & (
+            np.random.binomial(1, freq / 2)
+            | (max_dead_time * 2 < time_since_last_flash_single)
+        )
+    ):
+        time_since_last_flash_single = 0
+        return light_path("single_on")
+    else:
+        return light_path("single_off")
 
 
 if __name__ == "__main__":
