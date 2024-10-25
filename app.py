@@ -1,8 +1,7 @@
 import numpy as np
 import dash_bootstrap_components as dbc
 
-from dash import Dash, Input, Output, State, ctx, dcc, html
-from typing import Optional
+from dash import Dash, Input, Output, dcc, html
 
 app = Dash(
     __name__,
@@ -18,20 +17,12 @@ app = Dash(
 )
 
 light_path = lambda spec: f"assets/{spec}.png"
-brake_path = lambda on: f"assets/brake_{'on'if on else 'off'}.png"
 n = 3
 light_interval = 2000
-brake_interval = 100
 freq = 0.5
 time_since_last_flash = 0
 min_dead_time = 2000
 max_dead_time = 5000
-time_since_last_brake = 0
-
-
-def should_brake(light_srcs: list) -> bool:
-    """Determines if the player should brake based on the lights that are currently on."""
-    return any((("red" in s) or ("yellow" in s) for s in light_srcs))
 
 
 app.layout = html.Div(
@@ -43,10 +34,6 @@ app.layout = html.Div(
                         dcc.Interval(
                             id="light_interval",
                             interval=light_interval,
-                        ),
-                        dcc.Interval(
-                            id="brake_interval",
-                            interval=brake_interval,
                         ),
                     ]
                 )
@@ -64,19 +51,23 @@ app.layout = html.Div(
             ],
             dbc.Col(
                 [
-                    dbc.Row(
-                        html.Img(
-                            id="brake",
-                            src=brake_path(False),
-                            width=300,
-                        )
+                    html.Div(
+                        dbc.Button(
+                            "fékezz!",
+                            id="break",
+                            color="danger",
+                            size="lg",
+                            outline=True,
+                        ),
+                        style=dict(marginBottom=100, marginRight=100),
                     ),
                     dbc.Row(
                         html.Img(
                             id="single_light",
                             src=light_path("single_off"),
                             width=200,
-                        )
+                        ),
+                        style=dict(marginRight=20),
                     ),
                 ]
             ),
@@ -113,25 +104,6 @@ def update_lights(n_intervals: int) -> list:
     else:
         new_imgs = [*[light_path("off") for _ in range(n)], light_path("single_off")]
     return new_imgs
-
-
-@app.callback(
-    Output("brake", "src"),
-    Input("brake", "n_clicks"),
-    Input("brake_interval", "n_intervals"),
-    State("brake", "src"),
-)
-def brake(n_clicks: Optional[int], n_intervals: int, brake_src: str) -> str:
-    global time_since_last_brake
-    time_since_last_brake += brake_interval
-    if ctx.triggered_id == "brake":
-        time_since_last_brake = 0
-        return brake_path(True)
-    else:
-        if brake_interval * 10 < time_since_last_brake:
-            return brake_path(False)
-        else:
-            return brake_src
 
 
 if __name__ == "__main__":
