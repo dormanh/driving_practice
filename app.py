@@ -19,7 +19,7 @@ app = Dash(
 light_path = lambda spec: f"assets/{spec}.png"
 n = 3
 multiple_interval = 2000
-single_interval = 2500
+single_interval = 5000
 freq = 0.5
 time_since_last_flash_multiple = 0
 time_since_last_flash_single = 0
@@ -108,10 +108,10 @@ def update_light(n_intervals: int) -> list:
     time_since_last_flash_single += single_interval
     if (
         (n_intervals is not None)
-        & (min_dead_time < time_since_last_flash_single)
+        & (min_dead_time * 2 < time_since_last_flash_single)
         & (
-            np.random.binomial(1, freq / 4)
-            | (max_dead_time * 2 < time_since_last_flash_single)
+            np.random.binomial(1, freq / 5)
+            | (max_dead_time * 4 < time_since_last_flash_single)
         )
     ):
         time_since_last_flash_single = 0
